@@ -1,92 +1,91 @@
 ---
 name: agent-attention-notifier
-description: Notify Nadia via WhatsApp + email when Hermes needs her attention or approval.
+description: Notify the user via beep, Windows popup, WhatsApp, and email when the agent needs attention.
 ---
 
 # Agent Attention Notifier
 
-When the agent needs user input (clarify times out, terminal command blocked, or waiting more than 2 minutes for a response), notify Nadia through both channels.
+When the agent needs user input (clarify times out, command blocked, waiting >30s), notify through all configured channels.
 
-## Triggers
-- `clarify` tool times out without response
-- Terminal command returns "BLOCKED: User denied this command"
-- Waiting more than 30 seconds for user input after asking a question
+## Channels
 
-## Sound Alert
+| Channel | Config | Platform |
+|---------|--------|----------|
+| 🔊 Beep | None (built-in) | Any terminal |
+| 🪟 Popup | `NOTIFY_WIN_USER` | Windows (WSL) |
+| 📱 WhatsApp | `NOTIFY_WA_CHAT_ID` | Any (requires Baileys bridge) |
+| 📧 Email | `NOTIFY_EMAIL_FROM`, `NOTIFY_EMAIL_TO` | Any (requires himalaya) |
+
+## Setup
+
 ```bash
-echo -e '\a'
+# Clone the repo
+git clone https://github.com/nujovich/hermes-attention-notifier.git ~/.hermes/skills/productivity/agent-attention-notifier
+
+# Or install via Hermes skill manager
+hermes skill install https://github.com/nujovich/hermes-attention-notifier
 ```
 
-## Windows Toast Popup
+Set environment variables in `~/.hermes/.env` or `~/.hermes/profiles/<profile>/.env`:
+
 ```bash
-python3 /home/nujovich/.hermes/skills/productivity/agent-attention-notifier/scripts/popup-notify.py "mensaje"
+# WhatsApp
+NOTIFY_WA_CHAT_ID="272047708074146@lid"
+NOTIFY_WA_BRIDGE_URL="http://localhost:3000/send"
+
+# Email
+NOTIFY_EMAIL_FROM="you@gmail.com"
+NOTIFY_EMAIL_TO="you@gmail.com"
+
+# Windows popup (WSL only)
+NOTIFY_WIN_USER="YourWindowsUsername"
 ```
 
-## WhatsApp Notification
+## Usage
+
 ```bash
-python3 /home/nujovich/.hermes/skills/productivity/agent-attention-notifier/scripts/whatsapp-notify.py "mensaje"
+# All channels with a custom message
+python3 scripts/notify-all.py "Task finished - ready for review"
+
+# By category (random message)
+python3 scripts/notify-all.py --category personality "the build is complete"
+
+# Individual channels
+python3 scripts/popup-notify.py "Check the terminal"
+python3 scripts/whatsapp-notify.py "I need your input"
 ```
 
-## Email Notification
-```bash
-python3 /home/nujovich/.hermes/skills/productivity/agent-attention-notifier/scripts/notify-all.py "mensaje"
-```
+## Categories
 
-## One-shot: all channels
-```bash
-python3 /home/nujovich/.hermes/skills/productivity/agent-attention-notifier/scripts/notify-all.py "mensaje"
-```
+| Category | Tone | Example |
+|----------|------|---------|
+| `approval` | Professional | "I need your approval to run [command]" |
+| `error` | Urgent | "[X] failed - can you check it?" |
+| `progress` | Positive | "Finished [task] - ready for review!" |
+| `personality` | Casual | "Sipping virtual coffee while I wait ☕" |
 
-## Preference History
-- May 26, 2026: Prefix changed from "🤖 Agente Financiero" to "🔔 Mermelada Tech" — user wanted cleaner, more generic WhatsApp prefix
-- May 26, 2026: Dual notification (WhatsApp + email) requested — user not always at terminal
+## How It Works
 
-## Custom Messages by Category
+When triggered (e.g., clarify() times out), the agent:
 
-Choose the most appropriate message based on context. Always keep them short.
+1. Plays a terminal beep
+2. Sends a Windows popup (if configured)
+3. Sends a WhatsApp message (if configured)
+4. Sends an email (if configured)
 
-### 🔧 Técnicos / Error
-```
-"Necesito tu aprobacion para ejecutar [comando]"
-"El cron de [X] fallo - necesito que revises [Y]"
-"Encontre un error con [Z] - ven a verlo al terminal"
-"[Tool] devolvio un error inesperado - necesito tu opinion"
-```
+Each channel is optional — set only the env vars for the channels you want.
 
-### 🤔 Decisión
-```
-"Tengo [N] opciones para [tema] - cual preferis?"
-"Necesito que elijas entre [A] y [B]"
-"No estoy seguro de como seguir con [X]"
-"Hay [N] caminos posibles para [tema] - decidi cuando vuelvas"
-```
+## Customization
 
-### 📢 Progreso / Resultados
-```
-"Termine [tarea] - listo para revision!"
-"Avance hasta [punto] - avisame cuando quieras seguir"
-"Encontre algo interesante sobre [tema]"
-"Construi [proyecto] con [N] tools funcionales - veni a ver"
-"[Tarea] completada - resumen esperando en el terminal"
-```
+Add your own message templates in `CATEGORIES` inside `scripts/notify-all.py`. Each category supports `{detail}` as a placeholder.
 
-### 😄 Con personalidad (usar con moderación)
-```
-"Voy a esperar aqui tomando cafe virtual ☕"
-"Sin prisa, pero cuando vuelvas tengo algo copado para mostrarte"
-"Tarea completada con 🎉 - veni a ver el resultado"
-"Me quedo aca en modo ahorro de energia hasta que vuelvas ⏸️"
-"Esto quedo mejor de lo que esperaba - veni a ver!"
-```
+## Requirements (per channel)
 
-## Flow
-1. First attempt normally (ask question / use clarify)
-2. Determine message category based on context
-3. If no response after 30s → beep + Windows popup + WhatsApp + email
-4. Wait for user to return to terminal
+- **Beep**: Any terminal emulator
+- **Popup**: WSL with PowerShell access to Windows
+- **WhatsApp**: Running Hermes WhatsApp bridge (Baileys) on localhost:3000
+- **Email**: Himalayan CLI configured (`himalaya --version`)
 
-## Notes
-- Always send BOTH WhatsApp AND email so there's redundancy
-- Keep messages short and clear - just enough context for Nadia to know what's needed
-- Nadia prefers Spanish for all notifications
-- WhatsApp bridge is at localhost:3000, financiero profile
+## License
+
+MIT — part of the [Hermes Agent Challenge](https://dev.to/nujovich/building-an-autonomous-mcp-lead-generation-system-with-hermes-agent-gf4).

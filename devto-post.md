@@ -81,7 +81,7 @@ This creates a small popup in the bottom-right of my Windows screen that auto-cl
 The WhatsApp bridge is already running as part of Hermes Agent's gateway. I just POST to the bridge's HTTP API:
 
 ```python
-payload = json.dumps({"chatId": "272047708074146@lid", "message": msg})
+payload = json.dumps({"chatId": os.environ["NOTIFY_WA_CHAT_ID"], "message": msg})
 req = urllib.request.Request("http://localhost:3000/send", data=payload,
     headers={"Content-Type": "application/json"})
 urllib.request.urlopen(req, timeout=5)
@@ -89,17 +89,17 @@ urllib.request.urlopen(req, timeout=5)
 
 This sends a message directly to my WhatsApp. Since I'm in self-chat mode (the bot chats to itself in my WhatsApp), I see it as a notification from myself.
 
-The bridge prepends a clean prefix: `🔔 Mermelada Tech` — so I know it's from my system.
+The bridge prepends a configurable prefix (mine shows `🔔 Mermelada Tech`).
 
 ## Channel 4: Email
 
 For failsafe redundancy, I also send an email:
 
 ```bash
-cat << 'MAILDELIM' | himalaya template send
-From: nujovich@gmail.com
-To: nujovich@gmail.com
-Subject: 🔔 Hermes necesita tu atencion
+himalaya template send << MAILDELIM
+From: you@email.com
+To: you@email.com
+Subject: 🔔 Hermes needs your attention
 
 [message body]
 MAILDELIM
