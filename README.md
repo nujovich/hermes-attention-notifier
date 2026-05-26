@@ -15,10 +15,7 @@ Multi-channel notification system for Hermes Agent. When the agent needs your in
 
 ```bash
 # Via Hermes skill manager
-hermes skill install https://github.com/nujovich/hermes-mcp-lead-gen
-
-# Or manual
-cp -r agent-attention-notifier ~/.hermes/skills/productivity/
+hermes skill install https://github.com/nujovich/hermes-attention-notifier
 ```
 
 Then add to your `~/.hermes/config.yaml` or load via `/skill agent-attention-notifier` in a session.
