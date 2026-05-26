@@ -36,8 +36,9 @@ def whatsapp(message: str):
 
 def popup(message: str):
     clean = message.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+    clean = clean.replace("\"", "'")
     ps1 = f"""$wshell = New-Object -ComObject WScript.Shell
-$wshell.Popup("{clean}", 10, "Hermes Agent", 0x40)
+$wshell.Popup("{clean}", 30, "Hermes Agent", 0x40) | Out-Null
 """
     wsl_path = "/tmp/hermes-toast.ps1"
     with open(wsl_path, "w") as f:
@@ -45,11 +46,26 @@ $wshell.Popup("{clean}", 10, "Hermes Agent", 0x40)
     win_relative = "C:\\Users\\{}\\AppData\\Local\\Temp\\hermes-toast.ps1".format(WINDOWS_USER)
     win_wsl = "/mnt/c/" + win_relative[3:].replace("\\", "/")
     subprocess.run(["cp", wsl_path, win_wsl], capture_output=True)
+    # Try PowerShell popup first (30s visible)
+    popup_ok = False
     result = subprocess.run(
         ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", win_relative],
-        capture_output=True, timeout=10
+        capture_output=True, timeout=35
     )
-    print(f"🪟 Popup sent (exit={result.returncode})")
+    if result.returncode == 0:
+        popup_ok = True
+    # Fallback: msg.exe (Windows native dialog on active session)
+    if not popup_ok:
+        try:
+            subprocess.run(
+                ["powershell.exe", "-Command", f"msg * /TIME:30 \"{clean}\""],
+                capture_output=True, timeout=15
+            )
+            print(f"🪟 Popup sent (msg.exe fallback)")
+        except Exception as e2:
+            print(f"🪟 Popup fallback also failed: {e2}")
+    else:
+        print(f"🪟 Popup sent (exit={result.returncode})")
 
 
 def email(message: str):
@@ -74,12 +90,39 @@ Por favor revisa el terminal cuando puedas.
 
 
 def notify_all(message: str):
-    """Send notifications across ALL channels."""
-    beep()
-    popup(message)
-    whatsapp(message)
-    email(message)
-    print("\n✅ Notificación completa — todos los canales enviados")
+    """Send notifications across ALL channels.
+    Each channel is independently try/except'd so one failure doesn't block the others.
+    """
+    results = []
+    # 1. Beep
+    try:
+        beep()
+        results.append("🔊 beep")
+    except Exception as e:
+        results.append(f"🔊 beep FAILED: {e}")
+    # 2. Popup
+    try:
+        popup(message)
+        results.append("🪟 popup")
+    except Exception as e:
+        results.append(f"🪟 popup FAILED: {e}")
+    # 3. WhatsApp
+    try:
+        whatsapp(message)
+        results.append("📱 whatsapp")
+    except Exception as e:
+        results.append(f"📱 whatsapp FAILED: {e}")
+    # 4. Email
+    try:
+        email(message)
+        results.append("📧 email")
+    except Exception as e:
+        results.append(f"📧 email FAILED: {e}")
+    ok = [r for r in results if "FAILED" not in r]
+    fail = [r for r in results if "FAILED" in r]
+    print(f"\n✅ Enviados: {', '.join(ok) if ok else 'ninguno'}")
+    if fail:
+        print(f"❌ Fallaron: {', '.join(fail)}")
 
 
 CATEGORIES = {

@@ -3,7 +3,7 @@
 import subprocess, os, sys, tempfile
 
 PS1_CONTENT = """$wshell = New-Object -ComObject WScript.Shell
-$wshell.Popup("{message}", 10, "Hermes Agent", 0x40)
+$wshell.Popup("{message}", 30, "Hermes Agent", 0x40) | Out-Null
 """
 
 def notify(message: str):
@@ -18,13 +18,13 @@ def notify(message: str):
 
     # Copy to Windows temp
     win_path = r"C:\Users\NadiaUjovich\AppData\Local\Temp\hermes-toast.ps1"
-    subprocess.run(["cp", wsl_path, "/mnt/c" + win_path[2:].replace("\\", "/")],
-                   capture_output=True)
+    win_wsl = "/mnt/c/" + win_path[3:].replace("\\", "/")
+    subprocess.run(["cp", wsl_path, win_wsl], capture_output=True)
 
-    # Execute via PowerShell
+    # Execute via PowerShell (25s timeout: WSL↔Windows interop overhead)
     result = subprocess.run(
-        ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", win_relative],
-        capture_output=True, timeout=10
+        ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", win_path],
+        capture_output=True, timeout=25
     )
     print(f"Popup sent (exit={result.returncode})")
 

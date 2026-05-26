@@ -79,6 +79,14 @@ Each channel is optional — set only the env vars for the channels you want.
 
 Add your own message templates in `CATEGORIES` inside `scripts/notify-all.py`. Each category supports `{detail}` as a placeholder.
 
+## Changelog
+
+### v1.1 — 2026-05-26
+
+- **Resilient multi-channel**: Each channel is wrapped in try/except — a failure in WhatsApp or popup no longer blocks email from being sent
+- **Popup improvements**: Increased visibility duration 10s → 30s; added `msg *` fallback for Windows native dialog; fixed double-quote escaping in PowerShell
+- **Bridge auto-recovery**: WhatsApp bridge restart detected and handled gracefully
+
 ## Requirements (per channel)
 
 - **Beep**: Any terminal emulator
